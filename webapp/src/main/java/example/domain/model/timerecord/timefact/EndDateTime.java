@@ -1,7 +1,7 @@
 package example.domain.model.timerecord.timefact;
 
 import example.domain.type.datetime.DateTime;
-import example.domain.type.time.QuarterRoundClockTime;
+import example.domain.type.datetime.QuarterRoundDateTime;
 
 import java.time.Duration;
 import java.time.LocalTime;
@@ -51,7 +51,15 @@ public class EndDateTime {
         );
     }
 
-    QuarterRoundClockTime normalizedClockTime() {
-        return value.time().quarterRoundDown();
+    public QuarterRoundDateTime normalized() {
+        return value.quarterRoundDown();
+    }
+
+    public boolean isAfter(DateTime other) {
+        return value.isAfter(other);
+    }
+
+    public boolean isBefore(DateTime other) {
+        return value.isBefore(other);
     }
 }

@@ -1,8 +1,12 @@
 package example.domain.model.legislation;
 
+import example.domain.model.timerecord.timefact.WorkRange;
+import example.domain.type.datetime.DateTime;
+import example.domain.type.datetime.QuarterRoundDateTime;
 import example.domain.type.time.ClockTime;
-import example.domain.type.time.ClockTimeRange;
 import example.domain.type.time.Minute;
+
+import java.time.LocalDateTime;
 
 /**
  * 深夜
@@ -22,26 +26,47 @@ public class Night {
         return new Night(new ClockTime("22:00"), new ClockTime("05:00"));
     }
 
-    public Minute nightMinute(ClockTimeRange range) {
-        if (range.wholeDay()) {
-            return new ClockTimeRange(nightStartTime, nightFinishTime).minute();
-        }
-        if (range.across2days()) {
-            return new ClockTimeRange(
-                    ClockTime.later(range.begin(), nightStartTime),
-                    ClockTime.faster(range.end(), nightFinishTime)
-            ).minute();
+    public Minute nightMinute(WorkRange range) {
+        Minute earlyMorning = earlyMorning(range.start().normalized(), range.end().normalized());
+        Minute midnight = midnight(range.start().normalized(), range.end().normalized());
+        return earlyMorning.add(midnight);
+    }
+
+    private Minute earlyMorning(QuarterRoundDateTime startDateTime, QuarterRoundDateTime endDateTime) {
+        DateTime earlyMorningFinishDateTime = new DateTime(LocalDateTime.of(startDateTime.value().date().value(), nightFinishTime.value()));
+
+        if (startDateTime.isBefore(earlyMorningFinishDateTime)
+            && endDateTime.isAfter(earlyMorningFinishDateTime)) {
+            return QuarterRoundDateTime.between(startDateTime, earlyMorningFinishDateTime);
         }
 
-        Minute minute = new Minute(0);
-        // 早朝
-        if (range.begin().isBefore(nightFinishTime)) {
-            minute = minute.add(new ClockTimeRange(range.begin(), ClockTime.faster(range.end(), nightFinishTime)).minute());
+        if (startDateTime.isBefore(earlyMorningFinishDateTime)
+            && endDateTime.isBefore(earlyMorningFinishDateTime)) {
+            return QuarterRoundDateTime.between(startDateTime, endDateTime);
         }
-        // 残業
-        if (range.end().isAfter(nightStartTime)) {
-            minute = minute.add(new ClockTimeRange(nightStartTime, range.end()).minute());
+
+        return new Minute(0);
+    }
+
+    private Minute midnight(QuarterRoundDateTime startDateTime, QuarterRoundDateTime endDateTime) {
+        DateTime nightStartDateTime = new DateTime(LocalDateTime.of(startDateTime.value().date().value(), nightStartTime.value()));
+        DateTime nightFinishDateTime = new DateTime(LocalDateTime.of(startDateTime.value().date().plusDays(1).value(), nightFinishTime.value()));
+
+        if (endDateTime.isAfter(nightStartDateTime)
+            && endDateTime.isBefore(nightFinishDateTime)
+            && startDateTime.isAfter(nightStartDateTime)) {
+            return QuarterRoundDateTime.between(startDateTime, endDateTime);
         }
-        return minute;
+
+        if (endDateTime.isAfter(nightStartDateTime)
+            && endDateTime.isBefore(nightFinishDateTime)) {
+            return DateTime.between(nightStartDateTime, endDateTime);
+        }
+
+        if (endDateTime.isAfter(nightStartDateTime)) {
+            return DateTime.between(nightStartDateTime, nightFinishDateTime);
+        }
+
+        return new Minute(0);
     }
 }
