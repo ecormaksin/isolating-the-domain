@@ -2,16 +2,15 @@ package example.presentation.controller.timerecord;
 
 import example.domain.model.employee.EmployeeNumber;
 import example.domain.model.timerecord.evaluation.*;
-import example.domain.model.timerecord.timefact.*;
-import example.domain.type.date.Date;
+import example.domain.model.timerecord.timefact.EndDateTime;
+import example.domain.model.timerecord.timefact.StartDateTime;
+import example.domain.model.timerecord.timefact.WorkRange;
 import example.domain.type.datetime.DateTime;
-import example.domain.type.time.ClockTime;
+import example.domain.type.time.Time;
 import example.domain.type.time.Minute;
 
 import javax.validation.constraints.AssertTrue;
 import java.time.DateTimeException;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 
 public class AttendanceForm {
 
@@ -23,8 +22,11 @@ public class AttendanceForm {
     String endHour = "";
     String endMinute = "";
 
-    String daytimeBreakTime = "";
-    String nightBreakTime = "";
+    DaytimeBreakTime daytimeBreakTime;
+    NightBreakTime nightBreakTime;
+
+    boolean overlapWithPreviousWorkRange;
+    boolean overlapWithNextWorkRange;
 
     public AttendanceForm() {
     }
@@ -35,29 +37,22 @@ public class AttendanceForm {
     }
 
     private ActualWorkDateTime toActualWorkDateTime() {
-        Date workDate = new Date(this.workDate);
-        LocalDateTime startLocalDateTime = LocalDateTime.of(workDate.value(), LocalTime.of(Integer.valueOf(startHour), Integer.valueOf(startMinute)));
-        StartDateTime startDateTime = new StartDateTime(new DateTime(startLocalDateTime));
-        EndDateTime endDateTime = (new InputEndTime(Integer.valueOf(endHour), Integer.valueOf(endMinute))).endDateTime(workDate);
-
-        Minute minute = new Minute(daytimeBreakTime);
-        Minute nightMinute = new Minute(nightBreakTime);
-        return toActualWorkDateTime(startDateTime, endDateTime, minute, nightMinute);
+        return toActualWorkDateTime(workStartDateTime(), workEndDateTime(), daytimeBreakTime, nightBreakTime);
     }
 
-    private static ActualWorkDateTime toActualWorkDateTime(StartDateTime startDateTime, EndDateTime endDateTime, Minute minute, Minute nightMinute) {
+    private static ActualWorkDateTime toActualWorkDateTime(StartDateTime startDateTime, EndDateTime endDateTime, DaytimeBreakTime daytimeBreakTime, NightBreakTime nightBreakTime) {
         return new ActualWorkDateTime(
                 new WorkRange(startDateTime, endDateTime),
-                new DaytimeBreakTime(minute),
-                new NightBreakTime(nightMinute));
+                daytimeBreakTime,
+                nightBreakTime);
     }
 
     // テストへの流出がキツイので一旦ここに集める。最終domainに持っていきたい。
     @Deprecated
     public static ActualWorkDateTime toActualWorkDateTime(String startDate, String startTime, String endTime, String daytimeBreak, String nightBreak) {
         StartDateTime startDateTime = new StartDateTime(DateTime.parse(startDate, startTime));
-        EndDateTime endDateTime = InputEndTime.from(endTime).endDateTime(new Date(startDate));
-        return toActualWorkDateTime(startDateTime, endDateTime, new Minute(daytimeBreak), new Minute(nightBreak));
+        EndDateTime endDateTime = InputEndTime.from(endTime).endDateTime(startDateTime);
+        return toActualWorkDateTime(startDateTime, endDateTime, new DaytimeBreakTime(daytimeBreak), new NightBreakTime(nightBreak));
     }
 
     public void apply(TimeRecord timeRecord) {
@@ -72,8 +67,25 @@ public class AttendanceForm {
         this.endHour = endClockTime[0];
         this.endMinute = endClockTime[1];
 
-        this.daytimeBreakTime = timeRecord.actualWorkDateTime().daytimeBreakTime().toString();
-        this.nightBreakTime = timeRecord.actualWorkDateTime().nightBreakTime().toString();
+        this.daytimeBreakTime = timeRecord.actualWorkDateTime().daytimeBreakTime();
+        this.nightBreakTime = timeRecord.actualWorkDateTime().nightBreakTime();
+    }
+
+    private Time workStartTime() {
+        return new Time(Integer.valueOf(startHour), Integer.valueOf(this.startMinute));
+    }
+
+    private InputEndTime inputEndTime() {
+        return new InputEndTime(Integer.parseInt(endHour), Integer.parseInt(endMinute));
+    }
+
+    private StartDateTime workStartDateTime() {
+        return new StartDateTime(DateTime.parse(workDate, startHour, startMinute));
+    }
+
+    private EndDateTime workEndDateTime() {
+        InputEndTime time = inputEndTime();
+        return time.endDateTime(workStartDateTime());
     }
 
     boolean workDateComplete;
@@ -134,7 +146,7 @@ public class AttendanceForm {
         if (!isEndTimeComplete()) return true;
 
         try {
-            workEndTime();
+            inputEndTime();
         } catch (NumberFormatException ex) {
             return false;
         }
@@ -142,19 +154,17 @@ public class AttendanceForm {
         return true;
     }
 
-    private ClockTime workEndTime() {
-        int endHour = Integer.parseInt(this.endHour) % 24;
-        int endMinute = Integer.parseInt(this.endMinute);
-        return new ClockTime(endHour, endMinute);
+    private boolean unnecessaryCalculate() {
+        return !isStartTimeComplete() || !isStartTimeValid()
+                || !isEndTimeComplete() || !isEndTimeValid()
+                || !isWorkDateComplete() || !isWorkDateValid();
     }
 
     boolean workTimeValid;
 
     @AssertTrue(message = "終了時刻には開始時刻よりあとの時刻を入力してください")
     public boolean isWorkTimeValid() {
-        if (!isStartTimeComplete()) return true;
-        if (!isEndTimeComplete()) return true;
-        if (!isStartTimeValid() || !isEndTimeValid()) return true;
+        if (unnecessaryCalculate()) return true;
 
         StartDateTime startDateTime = workStartDateTime();
         EndDateTime endDateTime = workEndDateTime();
@@ -163,47 +173,14 @@ public class AttendanceForm {
         return false;
     }
 
-    private ClockTime workStartTime() {
-        return new ClockTime(Integer.valueOf(startHour), Integer.valueOf(this.startMinute));
-    }
-
-    private StartDateTime workStartDateTime() {
-        return new StartDateTime(DateTime.parse(workDate, startHour, startMinute));
-    }
-
-    private EndDateTime workEndDateTime() {
-        InputEndTime time = new InputEndTime(Integer.valueOf(endHour), Integer.valueOf(endMinute));
-        return time.endDateTime(new Date(workDate));
-    }
-
-    boolean daytimeBreakTimeValid;
-
-    @AssertTrue(message = "休憩時間が不正です")
-    public boolean isDaytimeBreakTimeValid() {
-        if (daytimeBreakTime.isEmpty()) return true;
-
-        try {
-            DaytimeBreakTime daytimeBreakTime = new DaytimeBreakTime(new Minute(this.daytimeBreakTime));
-
-            Minute daytimeBindingMinute = toActualWorkDateTime().daytimeBindingTime().quarterHour().minute();
-            if (daytimeBindingMinute.lessThan(daytimeBreakTime.minute())) {
-                return false;
-            }
-        } catch (NumberFormatException | DateTimeException ex) {
-            return false;
-        }
-        return true;
-    }
-
     boolean nightBreakTimeValid;
 
     @AssertTrue(message = "休憩時間（深夜）が不正です")
     public boolean isNightBreakTimeValid() {
-        if (nightBreakTime.isEmpty()) return true;
+        if (nightBreakTime == null) return false;
+        if (unnecessaryCalculate() || !isWorkTimeValid()) return true;
 
         try {
-            NightBreakTime nightBreakTime = new NightBreakTime(new Minute(this.nightBreakTime));
-
             Minute nightBindingMinute = toActualWorkDateTime().nightBindingTime().quarterHour().minute();
             if (nightBindingMinute.lessThan(nightBreakTime.minute())) {
                 return false;

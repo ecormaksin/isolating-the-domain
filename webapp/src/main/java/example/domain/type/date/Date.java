@@ -74,7 +74,15 @@ public class Date {
         return new Date(value.minusDays(1));
     }
 
+    public Date nextDay() {
+        return new Date(value.plusDays(1));
+    }
+
     public boolean isAfter(Date date) {
         return value.isAfter(date.value);
+    }
+
+    public String yyyyMMdd() {
+        return value.format(DateTimeFormatter.ofPattern("uuuuMMdd"));
     }
 }

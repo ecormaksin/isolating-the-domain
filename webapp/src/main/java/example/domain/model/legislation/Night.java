@@ -1,9 +1,8 @@
 package example.domain.model.legislation;
 
-import example.domain.model.timerecord.timefact.WorkRange;
 import example.domain.type.datetime.DateTime;
 import example.domain.type.datetime.QuarterRoundDateTime;
-import example.domain.type.time.ClockTime;
+import example.domain.type.time.Time;
 import example.domain.type.time.Minute;
 
 import java.time.LocalDateTime;
@@ -13,26 +12,26 @@ import java.time.LocalDateTime;
  */
 public class Night {
 
-    ClockTime nightStartTime;
-    ClockTime nightFinishTime;
+    Time nightStartTime;
+    Time nightFinishTime;
 
-    public Night(ClockTime nightStartTime, ClockTime nightFinishTime) {
+    public Night(Time nightStartTime, Time nightFinishTime) {
         this.nightStartTime = nightStartTime;
         this.nightFinishTime = nightFinishTime;
     }
 
     public static Night legal() {
         // 第三十七条第四項で定められている深夜
-        return new Night(new ClockTime("22:00"), new ClockTime("05:00"));
+        return new Night(new Time("22:00"), new Time("05:00"));
     }
 
-    public Minute nightMinute(WorkRange range) {
-        Minute earlyMorning = earlyMorning(range.start().normalized(), range.end().normalized());
-        Minute midnight = midnight(range.start().normalized(), range.end().normalized());
-        return earlyMorning.add(midnight);
+    public Minute nightMinute(QuarterRoundDateTime startDateTime, QuarterRoundDateTime endDateTime) {
+        Minute before = before(startDateTime, endDateTime);
+        Minute after = after(startDateTime, endDateTime);
+        return before.add(after);
     }
 
-    private Minute earlyMorning(QuarterRoundDateTime startDateTime, QuarterRoundDateTime endDateTime) {
+    private Minute before(QuarterRoundDateTime startDateTime, QuarterRoundDateTime endDateTime) {
         DateTime earlyMorningFinishDateTime = new DateTime(LocalDateTime.of(startDateTime.value().date().value(), nightFinishTime.value()));
 
         if (startDateTime.isBefore(earlyMorningFinishDateTime)
@@ -48,7 +47,7 @@ public class Night {
         return new Minute(0);
     }
 
-    private Minute midnight(QuarterRoundDateTime startDateTime, QuarterRoundDateTime endDateTime) {
+    private Minute after(QuarterRoundDateTime startDateTime, QuarterRoundDateTime endDateTime) {
         DateTime nightStartDateTime = new DateTime(LocalDateTime.of(startDateTime.value().date().value(), nightStartTime.value()));
         DateTime nightFinishDateTime = new DateTime(LocalDateTime.of(startDateTime.value().date().plusDays(1).value(), nightFinishTime.value()));
 

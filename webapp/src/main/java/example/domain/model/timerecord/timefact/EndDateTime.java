@@ -23,9 +23,7 @@ public class EndDateTime {
     }
 
     public boolean isAfter(StartDateTime startDateTime) {
-        if (value.date().isAfter(startDateTime.value.date())) return true;
-
-        return value.time().isAfter(startDateTime.value.time());
+        return value.isAfter(startDateTime.value);
     }
 
     @Override
@@ -61,5 +59,13 @@ public class EndDateTime {
 
     public boolean isBefore(DateTime other) {
         return value.isBefore(other);
+    }
+
+    boolean isBefore(StartDateTime other) {
+        return value.isBefore(other.value);
+    }
+
+    boolean isBefore(EndDateTime other) {
+        return value.isBefore(other.value);
     }
 }

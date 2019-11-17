@@ -3,8 +3,9 @@ package example.infrastructure.datasource.timerecord;
 import example.application.repository.TimeRecordRepository;
 import example.domain.model.attendance.TimeRecords;
 import example.domain.model.attendance.WorkMonth;
-import example.domain.model.timerecord.evaluation.TimeRecord;
 import example.domain.model.employee.Employee;
+import example.domain.model.employee.EmployeeNumber;
+import example.domain.model.timerecord.evaluation.TimeRecord;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,9 +17,10 @@ public class TimeRecordDataSource implements TimeRecordRepository {
     @Override
     public void registerTimeRecord(TimeRecord timeRecord) {
         Integer identifier = mapper.newWorkTimeIdentifier();
-        mapper.insertWorkTimeHistory(identifier, timeRecord.employeeNumber(), timeRecord);
-        mapper.deleteWorkTime(timeRecord.employeeNumber(), timeRecord.actualWorkDateTime().workRange().start());
-        mapper.insertWorkTime(timeRecord.employeeNumber(), identifier, timeRecord);
+        EmployeeNumber employeeNumber = timeRecord.employeeNumber();
+        mapper.insertWorkTimeHistory(identifier, employeeNumber, timeRecord, timeRecord.workDate());
+        mapper.deleteWorkTime(employeeNumber, timeRecord.workDate());
+        mapper.insertWorkTime(employeeNumber, identifier, timeRecord, timeRecord.workDate());
     }
 
     @Override

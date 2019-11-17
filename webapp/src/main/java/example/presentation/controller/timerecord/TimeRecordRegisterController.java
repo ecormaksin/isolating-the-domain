@@ -1,5 +1,6 @@
 package example.presentation.controller.timerecord;
 
+import example.application.coordinator.timerecord.TimeRecordCoordinator;
 import example.application.coordinator.timerecord.TimeRecordQueryCoordinator;
 import example.application.service.employee.EmployeeQueryService;
 import example.application.service.timerecord.TimeRecordRecordService;
@@ -16,7 +17,10 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.ConstraintViolation;
+import javax.validation.Validator;
 import java.time.LocalDate;
+import java.util.Set;
 
 /**
  * 勤務時間の登録
@@ -27,12 +31,22 @@ public class TimeRecordRegisterController {
 
     EmployeeQueryService employeeQueryService;
     TimeRecordRecordService timeRecordRecordService;
+    TimeRecordCoordinator timeRecordCoordinator;
     TimeRecordQueryCoordinator timeRecordQueryCoordinator;
+    Validator validator;
 
-    public TimeRecordRegisterController(EmployeeQueryService employeeQueryService, TimeRecordRecordService timeRecordRecordService, TimeRecordQueryCoordinator timeRecordQueryCoordinator) {
+    public TimeRecordRegisterController(
+        EmployeeQueryService employeeQueryService,
+        TimeRecordRecordService timeRecordRecordService,
+        TimeRecordCoordinator timeRecordCoordinator,
+        TimeRecordQueryCoordinator timeRecordQueryCoordinator,
+        Validator validator) {
         this.employeeQueryService = employeeQueryService;
         this.timeRecordRecordService = timeRecordRecordService;
+        this.timeRecordCoordinator = timeRecordCoordinator;
         this.timeRecordQueryCoordinator = timeRecordQueryCoordinator;
+
+        this.validator = validator;
     }
 
     @ModelAttribute("employees")
@@ -72,6 +86,22 @@ public class TimeRecordRegisterController {
                     BindingResult result) {
         if (result.hasErrors()) return "timerecord/form";
         TimeRecord timeRecord = attendanceForm.toTimeRecord();
+
+        Set<ConstraintViolation<TimeRecord>> violations = validator.validate(timeRecord);
+        violations.forEach(violation -> {
+            // FIXME: 今は休憩時間しかチェックしていないのでとりあえず動かしている
+            result.rejectValue("daytimeBreakTime", "", violation.getMessage());
+        });
+
+        if(timeRecordCoordinator.isOverlapWithPreviousWorkRange(timeRecord)) {
+            result.rejectValue("overlapWithPreviousWorkRange", "", "前日の勤務時刻と重複しています");
+        }
+
+        if(timeRecordCoordinator.isOverlapWithNextWorkRange(timeRecord)) {
+            result.rejectValue("overlapWithNextWorkRange", "", "翌日の勤務時刻と重複しています");
+        }
+
+        if (result.hasErrors()) return "timerecord/form";
 
         timeRecordRecordService.registerTimeRecord(timeRecord);
 
