@@ -11,15 +11,12 @@ import example.domain.model.legislation.OverTimeExtraRate;
 import example.domain.model.wage.HourlyWage;
 import example.domain.model.wage.WageCondition;
 import example.domain.type.date.Date;
-import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @SpringBootTest
 public class ContractWageRecordServiceTest {
     @Autowired
@@ -34,7 +31,7 @@ public class ContractWageRecordServiceTest {
     @Test
     void test() {
         EmployeeNumber employeeNumber = employeeRecordCoordinator.register(
-                new Profile(new Name("any"), new MailAddress("any"), new PhoneNumber("any")));
+                new EmployeeToRegister(new Name("any"), new MailAddress("any"), new PhoneNumber("any")));
 
         登録直後の従業員は時給を持たない(employeeNumber);
         時給が登録できる(employeeNumber);
