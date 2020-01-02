@@ -1,14 +1,19 @@
 package example.domain.model.timerecord.evaluation;
 
+import example.domain.validation.Required;
 import example.domain.type.date.Date;
 import example.domain.type.date.DayOfWeek;
-import example.domain.type.date.WeekOfMonth;
+
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 
 /**
  * 勤務日付
  */
 public class WorkDate {
 
+    @Valid
+    @NotNull(message = "勤務日を入力してください", groups = Required.class)
     Date value;
 
     @Deprecated
@@ -19,8 +24,8 @@ public class WorkDate {
         value = date;
     }
 
-    public WorkDate(String value) {
-        this(new Date(value));
+    public static WorkDate from(String value) {
+        return new WorkDate(Date.from(value));
     }
 
     public Date value() {
@@ -33,10 +38,6 @@ public class WorkDate {
 
     public DayOfWeek dayOfWeek() {
         return value.dayOfWeek();
-    }
-
-    public WeekOfMonth weekOfMonth() {
-        return value.weekOfMonth();
     }
 
     public boolean hasSameValue(WorkDate other) {

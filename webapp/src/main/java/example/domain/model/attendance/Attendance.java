@@ -1,8 +1,10 @@
 package example.domain.model.attendance;
 
+import example.domain.model.legislation.DaysOff;
+import example.domain.model.timerecord.evaluation.StatutoryWorkOnDaysOff;
 import example.domain.model.timerecord.evaluation.TimeRecord;
 import example.domain.model.timerecord.evaluation.WorkDate;
-import example.domain.type.date.WeekOfMonth;
+import example.domain.type.date.Week;
 import example.domain.type.time.QuarterHour;
 
 import java.util.List;
@@ -54,11 +56,24 @@ public class Attendance {
                 .collect(Collectors.toList());
     }
 
-    public WeekWorkTime weekWorkTime(WeekOfMonth weekOfMonth) {
+    WeekWorkTime weekWorkTime(Week week) {
         return new WeekWorkTime(timeRecords.list().stream()
-                .filter(timeRecord -> timeRecord.actualWorkDateTime().workDate().weekOfMonth().hasSameValue(weekOfMonth))
+                .filter(timeRecord -> week.contains(timeRecord.actualWorkDateTime().workDate().value()))
                 .map(timeRecord -> timeRecord.actualWorkDateTime().workTime().quarterHour())
                 .reduce(QuarterHour::add)
                 .orElseGet(QuarterHour::new));
     }
+
+    // TODO: 法定時間内残業 (所定労働時間を超えるが、法定時間内におさまる残業)
+    // TODO: 法定時間外残業
+
+    StatutoryWorkOnDaysOff statutoryDaysOffWorkByWeek(Week week) {
+        DaysOff daysOff = DaysOff.from(week);
+        return new StatutoryWorkOnDaysOff(timeRecords.list().stream()
+            .filter(timeRecord -> timeRecord.actualWorkDateTime().workDate().value().hasSameValue(daysOff.value()))
+            .map(timeRecord -> timeRecord.actualWorkDateTime().workTime().quarterHour())
+            .reduce(QuarterHour::add)
+            .orElseGet(QuarterHour::new));
+    }
+
 }

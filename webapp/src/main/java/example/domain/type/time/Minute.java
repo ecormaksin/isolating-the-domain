@@ -1,5 +1,8 @@
 package example.domain.type.time;
 
+import example.domain.validation.FormatCheck;
+
+import javax.validation.constraints.Min;
 import java.math.BigDecimal;
 import java.time.DateTimeException;
 
@@ -7,17 +10,19 @@ import java.time.DateTimeException;
  * 分(数)
  */
 public class Minute {
+    @Min(value = 0, groups = FormatCheck.class, message = "分が負の値になっています")
     int value;
 
     @Deprecated
     Minute() {
     }
 
-    public Minute(String time) {
-        value = time.isEmpty() ? 0 : Integer.parseInt(time);
+    public static Minute from(String time) {
+        Integer value = time.isEmpty() ? 0 : Integer.parseInt(time);
         if (value < 0) {
             throw new DateTimeException("分が負の値になっています");
         }
+        return new Minute(value);
     }
 
     public Minute(int time) {

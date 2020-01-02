@@ -4,7 +4,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.WeekFields;
 
 /**
  * 日付
@@ -18,8 +17,8 @@ public class Date {
     public Date() {
     }
 
-    public Date(String value) {
-        this(LocalDate.parse(value, DateTimeFormatter.ISO_DATE));
+    public static Date from(String value) {
+        return new Date(LocalDate.parse(value, DateTimeFormatter.ISO_DATE));
     }
 
     public Date(LocalDate value) {
@@ -85,10 +84,5 @@ public class Date {
 
     public String yyyyMMdd() {
         return value.format(DateTimeFormatter.ofPattern("uuuuMMdd"));
-    }
-
-    public WeekOfMonth weekOfMonth() {
-        WeekFields wf = WeekFields.of(java.time.DayOfWeek.SUNDAY, 1);
-        return new WeekOfMonth(value.get(wf.weekOfMonth()));
     }
 }

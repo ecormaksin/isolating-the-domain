@@ -2,25 +2,28 @@ package example.presentation.controller.timerecord;
 
 import example.application.coordinator.timerecord.TimeRecordCoordinator;
 import example.application.coordinator.timerecord.TimeRecordQueryCoordinator;
+import example.application.service.daysoff.DaysOffRecordService;
 import example.application.service.employee.EmployeeQueryService;
 import example.application.service.timerecord.TimeRecordRecordService;
+import example.domain.model.timerecord.evaluation.*;
+import example.domain.validation.BusinessLogic;
+import example.domain.validation.Conversion;
+import example.domain.validation.Required;
+import example.domain.validation.FormatCheck;
 import example.domain.model.attendance.WorkMonth;
 import example.domain.model.employee.ContractingEmployees;
 import example.domain.model.employee.EmployeeNumber;
-import example.domain.model.timerecord.evaluation.TimeRecord;
-import example.domain.model.timerecord.evaluation.WorkDate;
 import example.domain.type.date.Date;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.ConstraintViolation;
-import javax.validation.Validator;
+import javax.validation.GroupSequence;
 import java.time.LocalDate;
-import java.util.Set;
 
 /**
  * 勤務時間の登録
@@ -29,24 +32,26 @@ import java.util.Set;
 @RequestMapping("timerecord")
 public class TimeRecordRegisterController {
 
+    @GroupSequence({Required.class, FormatCheck.class, Conversion.class, BusinessLogic.class})
+    public interface GroupOrder {}
+
     EmployeeQueryService employeeQueryService;
     TimeRecordRecordService timeRecordRecordService;
     TimeRecordCoordinator timeRecordCoordinator;
     TimeRecordQueryCoordinator timeRecordQueryCoordinator;
-    Validator validator;
+    DaysOffRecordService daysOffRecordService;
 
     public TimeRecordRegisterController(
             EmployeeQueryService employeeQueryService,
             TimeRecordRecordService timeRecordRecordService,
             TimeRecordCoordinator timeRecordCoordinator,
             TimeRecordQueryCoordinator timeRecordQueryCoordinator,
-            Validator validator) {
+            DaysOffRecordService daysOffRecordService) {
         this.employeeQueryService = employeeQueryService;
         this.timeRecordRecordService = timeRecordRecordService;
         this.timeRecordCoordinator = timeRecordCoordinator;
         this.timeRecordQueryCoordinator = timeRecordQueryCoordinator;
-
-        this.validator = validator;
+        this.daysOffRecordService = daysOffRecordService;
     }
 
     @ModelAttribute("employees")
@@ -65,12 +70,6 @@ public class TimeRecordRegisterController {
                 @RequestParam(value = "workDate", required = false) WorkDate workDate,
                 @ModelAttribute AttendanceForm attendanceForm,
                 Model model) {
-        if (employeeNumber != null) {
-            attendanceForm.employeeNumber = employeeNumber;
-        }
-        if (workDate != null) {
-            attendanceForm.workDate = workDate.toString();
-        }
         if (employeeNumber != null && workDate != null) {
             TimeRecord timeRecord = timeRecordQueryCoordinator.timeRecord(employeeNumber, workDate);
             attendanceForm.apply(timeRecord);
@@ -82,20 +81,18 @@ public class TimeRecordRegisterController {
     }
 
     @PostMapping
-    String register(@Validated @ModelAttribute("attendanceForm") AttendanceForm attendanceForm,
+    String register(@Validated(GroupOrder.class) @ModelAttribute("attendanceForm") AttendanceForm attendanceForm,
                     BindingResult result) {
         if (result.hasErrors()) return "timerecord/form";
         TimeRecord timeRecord = attendanceForm.toTimeRecord();
 
-        Set<ConstraintViolation<TimeRecord>> violations = validator.validate(timeRecord);
-        violations.forEach(violation -> {
-            // FIXME: 今は休憩時間しかチェックしていないのでとりあえず動かしている
-            result.rejectValue("daytimeBreakTime", "", violation.getMessage());
-        });
-
-        timeRecordCoordinator.isValid(timeRecord).errors().forEach(error -> {
-            result.rejectValue(error.field(), "", error.message());
-        });
+        TimeRecordValidResult valid = timeRecordCoordinator.isValid(timeRecord);
+        if (valid.startTimeValidResult().hasError()) {
+            result.addError(new FieldError("attendanceForm", "startTime.valid", valid.startTimeValidResult().message()));
+        }
+        if (valid.endTimeValidResult().hasError()) {
+            result.addError(new FieldError("attendanceForm", "endTime.valid", valid.endTimeValidResult().message()));
+        }
 
         if (result.hasErrors()) return "timerecord/form";
 
@@ -103,20 +100,21 @@ public class TimeRecordRegisterController {
 
         WorkMonth workMonth = WorkMonth.from(timeRecord.workDate());
 
-        return "redirect:/attendances/" + attendanceForm.employeeNumber.value() + "/" + workMonth.toString();
+        return "redirect:/attendances/" + timeRecord.employeeNumber().value() + "/" + workMonth.toString();
     }
 
     @InitBinder
     public void initBinder(WebDataBinder binder) {
         binder.setAllowedFields(
                 "employeeNumber",
-                "workDate",
-                "startHour",
-                "startMinute",
-                "endHour",
-                "endMinute",
-                "daytimeBreakTime",
-                "nightBreakTime"
+                "workDate.value",
+                "startTime.hour.value",
+                "startTime.minute.value",
+                "endTime.hour.value",
+                "endTime.minute.value",
+                "daytimeBreakTime.value.value",
+                "nightBreakTime.value.value",
+                "isDaysOff"
         );
     }
 }

@@ -1,7 +1,6 @@
 package example.application.service;
 
 import example.application.coordinator.timerecord.TimeRecordCoordinator;
-import example.domain.model.timerecord.evaluation.TimeRecordValidError;
 import example.application.service.attendance.AttendanceQueryService;
 import example.application.service.employee.EmployeeQueryService;
 import example.application.service.timerecord.TimeRecordRecordService;
@@ -9,9 +8,7 @@ import example.domain.model.attendance.Attendance;
 import example.domain.model.attendance.WorkMonth;
 import example.domain.model.employee.Employee;
 import example.domain.model.employee.EmployeeNumber;
-import example.domain.model.timerecord.evaluation.ActualWorkDateTime;
-import example.domain.model.timerecord.evaluation.TimeRecord;
-import example.domain.model.timerecord.evaluation.WorkDate;
+import example.domain.model.timerecord.evaluation.*;
 import example.presentation.controller.timerecord.AttendanceForm;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,7 +42,7 @@ class TimeRecordRecordServiceTest {
         timeRecordRecordService.registerTimeRecord(registerTimeRecord);
 
         Attendance attendance = attendanceQueryService.findAttendance(employee, new WorkMonth("2000-10"));
-        TimeRecord timeRecord = attendance.at(new WorkDate("2000-10-20"));
+        TimeRecord timeRecord = attendance.at(WorkDate.from("2000-10-20"));
         ActualWorkDateTime actualWorkDateTime = timeRecord.actualWorkDateTime();
 
         assertEquals("14時間30分", actualWorkDateTime.workTime().toString());
@@ -64,7 +61,7 @@ class TimeRecordRecordServiceTest {
                 new TimeRecord(employeeNumber, AttendanceForm.toActualWorkDateTime("2000-10-20", "10:30", "25:00", "60", "30")));
 
         Attendance attendance = attendanceQueryService.findAttendance(employee, new WorkMonth("2000-10"));
-        TimeRecord timeRecord = attendance.at(new WorkDate("2000-10-20"));
+        TimeRecord timeRecord = attendance.at(WorkDate.from("2000-10-20"));
         ActualWorkDateTime actualWorkDateTime = timeRecord.actualWorkDateTime();
 
         assertEquals("13時間0分", actualWorkDateTime.workTime().toString());
@@ -79,7 +76,7 @@ class TimeRecordRecordServiceTest {
 
         TimeRecord timeRecord = new TimeRecord(employeeNumber, AttendanceForm.toActualWorkDateTime("2000-10-20", "8:59", "25:00", "60", "30"));
 
-        assertEquals(TimeRecordValidError.前日の勤務時刻と重複, timeRecordCoordinator.isValid(timeRecord).errors().get(0));
+        assertEquals(StartTimeValidResult.前日の勤務時刻と重複, timeRecordCoordinator.isValid(timeRecord).startTimeValidResult());
     }
 
     @Test
@@ -91,6 +88,6 @@ class TimeRecordRecordServiceTest {
 
         TimeRecord timeRecord = new TimeRecord(employeeNumber, AttendanceForm.toActualWorkDateTime("2000-10-20", "8:00", "33:00", "60", "30"));
 
-        assertEquals(TimeRecordValidError.翌日の勤務時刻と重複, timeRecordCoordinator.isValid(timeRecord).errors().get(0));
+        assertEquals(EndTimeValidResult.翌日の勤務時刻と重複, timeRecordCoordinator.isValid(timeRecord).endTimeValidResult());
     }
 }

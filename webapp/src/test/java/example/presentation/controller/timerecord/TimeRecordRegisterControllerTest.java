@@ -67,35 +67,35 @@ class TimeRecordRegisterControllerTest {
 
         mockMvc.perform(post("/timerecord")
                 .param("employeeNumber", "1")
-                .param("workDate", "2018-01-01")
-                .param("startHour", "9")
-                .param("startMinute", "00")
-                .param("endHour", "17")
-                .param("endMinute", "30")
-                .param("daytimeBreakTime", "0")
-                .param("nightBreakTime", "0")
+                .param("workDate.value", "2018-01-01")
+                .param("startTime.hour.value", "9")
+                .param("startTime.minute.value", "00")
+                .param("endTime.hour.value", "17")
+                .param("endTime.minute.value", "30")
+                .param("daytimeBreakTime.value.value", "0")
+                .param("nightBreakTime.value.value", "0")
         )
                 .andExpect(redirectedUrlPattern("/attendances/1/*"));
     }
 
     @CsvSource(value = {
-            "        '', 10,00, 17,30,  0,  0, workDateComplete",
-            "xxxx-01-01, 10,00, 17,30,  0,  0, workDateValid",
-            "2019-01-01, '',00, 17,30,  0,  0, startTimeComplete",
-            "2019-01-01, 10,'', 17,30,  0,  0, startTimeComplete",
-            "2019-01-01,  x,00, 17,30,  0,  0, startTimeValid",
-            "2019-01-01, 10, x, 17,30,  0,  0, startTimeValid",
-            "2019-01-01, 10,00, '',30,  0,  0, endTimeComplete",
-            "2019-01-01, 10,00, 17,'',  0,  0, endTimeComplete",
-            "2019-01-01, 10,00,  x,30,  0,  0, endTimeValid",
-            "2019-01-01, 10,00, 17, x,  0,  0, endTimeValid",
-            "2019-01-01, 20,00, 17,30,  0,  0, workTimeValid", // 開始 > 終了
-            "2019-01-01, 10,00, 17,30,  x,  0, daytimeBreakTime",
-            "2019-01-01, 10,00, 10,30, 90,  0, daytimeBreakTime", // over
-            "2019-01-01, 10,00, 23,30,  0,  x, nightBreakTimeValid",
-            "2019-01-01, 10,00, 13,30,  0, 90, nightBreakTimeValid", // over
-            "2019-01-02, 8,59, 21,00,  0, 0, overlapWithPreviousWorkRange",
-            "2019-01-02, 10,00, 33,01,  0, 0, overlapWithNextWorkRange",
+            "        '', 10,00, 17,30,  0,  0, workDate.value",
+            "xxxx-01-01, 10,00, 17,30,  0,  0, workDate.value",
+            "2019-01-01, '',00, 17,30,  0,  0, startTime.hour.value",
+            "2019-01-01, 10,'', 17,30,  0,  0, startTime.minute.value",
+            "2019-01-01,  x,00, 17,30,  0,  0, startTime.valid",
+            "2019-01-01, 10, x, 17,30,  0,  0, startTime.valid",
+            "2019-01-01, 10,00, '',30,  0,  0, endTime.hour.value",
+            "2019-01-01, 10,00, 17,'',  0,  0, endTime.minute.value",
+            "2019-01-01, 10,00,  x,30,  0,  0, endTime.valid",
+            "2019-01-01, 10,00, 17, x,  0,  0, endTime.valid",
+            "2019-01-01, 20,00, 17,30,  0,  0, timeRecord.actualWorkDateTime.workRange.workTimeValid", // 開始 > 終了
+            "2019-01-01, 10,00, 17,30,  x,  0, daytimeBreakTime.value.value",
+            "2019-01-01, 10,00, 10,30, 90,  0, timeRecord.actualWorkDateTime.daytimeBreakTimeValid", // over
+            "2019-01-01, 10,00, 23,30,  0,  x, nightBreakTime.value.value",
+            "2019-01-01, 10,00, 13,30,  0, 90, timeRecord.actualWorkDateTime.nightBreakTimeValid", // over
+            "2019-01-02, 8,59, 21,00,  0, 0, startTime.valid",
+            "2019-01-02, 10,00, 33,01,  0, 0, endTime.valid",
     })
     @ParameterizedTest
     void validation(String workDate, String startHour, String startMinute, String endHour, String endMinute, String daytimeBreakTime, String nightBreakTime, String errorField) throws Exception {
@@ -110,13 +110,13 @@ class TimeRecordRegisterControllerTest {
 
         mockMvc.perform(post("/timerecord")
                 .param("employeeNumber", "1")
-                .param("workDate", workDate)
-                .param("startHour", startHour)
-                .param("startMinute", startMinute)
-                .param("endHour", endHour)
-                .param("endMinute", endMinute)
-                .param("daytimeBreakTime", daytimeBreakTime)
-                .param("nightBreakTime", nightBreakTime)
+                .param("workDate.value", workDate)
+                .param("startTime.hour.value", startHour)
+                .param("startTime.minute.value", startMinute)
+                .param("endTime.hour.value", endHour)
+                .param("endTime.minute.value", endMinute)
+                .param("daytimeBreakTime.value.value", daytimeBreakTime)
+                .param("nightBreakTime.value.value", nightBreakTime)
         )
                 .andExpect(status().isOk())
                 .andExpect(view().name("timerecord/form"))
@@ -131,13 +131,13 @@ class TimeRecordRegisterControllerTest {
 
         mockMvc.perform(post("/timerecord")
                 .param("employeeNumber", "1")
-                .param("workDate", "2018-01-01")
-                .param("startHour", "9")
-                .param("startMinute", "00")
-                .param("endHour", "26")
-                .param("endMinute", "30")
-                .param("daytimeBreakTime", "0")
-                .param("nightBreakTime", "0")
+                .param("workDate.value", "2018-01-01")
+                .param("startTime.hour.value", "9")
+                .param("startTime.minute.value", "00")
+                .param("endTime.hour.value", "26")
+                .param("endTime.minute.value", "30")
+                .param("daytimeBreakTime.value.value", "0")
+                .param("nightBreakTime.value.value", "0")
         )
                 .andExpect(redirectedUrlPattern("/attendances/1/*"));
     }
@@ -161,6 +161,6 @@ class TimeRecordRegisterControllerTest {
         ModelAndView modelAndView = mvcResult.getModelAndView();
         AttendanceForm attendanceForm = (AttendanceForm) modelAndView.getModel().get("attendanceForm");
 
-        assertEquals("28", attendanceForm.endHour);
+        assertEquals("28", attendanceForm.endTime.hour.toString());
     }
 }

@@ -5,20 +5,23 @@
   <title>従業員情報の登録の完了</title>
 </head>
 <body>
-<div th:replace="fragments/menuHead::menuHead('')">
-</div>
-<div class="ui container">
-  <div class="pageHeader">
-    <h1 class="ui center aligned header">従業員情報の登録の完了</h1>
-  </div>
-  
-  <div class="userInput">
-    <div class="ui info message segment">
-      <p th:text="${name} + ' (' + ${employeeNumber} + ') ' + さんを登録しました。">登録完了しました。</p>
-    </div>
-  </div>
-  
-</div>
+<header th:replace="fragments/navigation::navigation('')"></header>
 
+<main class="container">
+  <header th:replace="fragments/header::header('従業員情報の登録の完了')"></header>
+  <section class="employeeInfo">
+    <div class="message is-success">
+      <p class="message-body"
+          th:text="${name} + ' (' + ${employeeNumber} + ') ' + 'さんを登録しました。'">
+        登録完了しました。
+      </p>
+    </div>
+
+    <div class="has-text-centered">
+      <a class="button is-light"
+         th:href="@{/employees}">従業員一覧に戻る</a>
+    </div>
+  </section>
+</main>
 </body>
 </html>
